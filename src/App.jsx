@@ -76,7 +76,7 @@ function AppContent() {
             className="inline-flex items-center transition-transform hover:scale-105 active:scale-95 focus:outline-none"
             title="GeM - Government e-Marketplace"
           >
-            <GemLogo height={44} />
+            <GemLogo height={80} />
           </Link>
         </div>
       )}

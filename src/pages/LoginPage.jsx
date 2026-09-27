@@ -42,7 +42,7 @@ export default function LoginPage() {
       >
         <div className="flex flex-col items-center text-center mb-6">
           <div className="mb-4">
-            <GemLogo height={44} />
+            <GemLogo height={132} />
           </div>
           <h2 className="text-2xl font-black text-white font-display tracking-tight">Officer Portal Login</h2>
           <p className="text-xs font-mono-code text-[#00E5FF] mt-1 font-semibold tracking-wider uppercase">
