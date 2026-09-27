@@ -10,7 +10,7 @@ const SLIDE_THEMES = [
   { glow: 'rgba(99,102,241,0.25)' },
 ];
 
-function FullscreenSlide({ id, children, slideNum, onSlideInView }) {
+function FullscreenSlide({ id, children, slideNum, onSlideInView, image }) {
   const ref = useRef(null);
   const isInView = useInView(ref, { amount: 0.5, once: false });
 
@@ -49,7 +49,7 @@ function FullscreenSlide({ id, children, slideNum, onSlideInView }) {
     >
       {/* Background image with zoom+fade */}
       <motion.img
-        src="/assets/slide1.jpg"
+        src={image}
         alt="CPCL Refinery Complex"
         className="absolute inset-0 w-full h-full object-cover object-[center_left] select-none pointer-events-none"
         loading="eager"
@@ -122,7 +122,7 @@ export default function HomePage({ containerRef, onNavigateToLogin, onSlideInVie
       style={{ scrollSnapType: 'y mandatory', scrollBehavior: 'smooth' }}
     >
       {/* SLIDE 1 — CYAN */}
-      <FullscreenSlide id="section-0" slideNum={1} onSlideInView={onSlideInView}>
+      <FullscreenSlide id="section-0" slideNum={1} onSlideInView={onSlideInView} image="/assets/slide1.jpg">
         <div className="inline-flex items-center gap-2 border border-cyan-400/40 bg-cyan-950/40 backdrop-blur-xl rounded-full px-4 py-1.5 text-xs font-bold tracking-wider uppercase text-[#00E5FF] w-fit shadow-[0_0_15px_rgba(0,229,255,0.3)]">
           <span className="w-2 h-2 rounded-full bg-[#00E5FF] animate-pulse" />
           CPCL · Ministry of Petroleum &amp; Natural Gas
@@ -159,7 +159,7 @@ export default function HomePage({ containerRef, onNavigateToLogin, onSlideInVie
       </FullscreenSlide>
 
       {/* SLIDE 2 — ROSE */}
-      <FullscreenSlide id="section-1" slideNum={2} onSlideInView={onSlideInView}>
+      <FullscreenSlide id="section-1" slideNum={2} onSlideInView={onSlideInView} image="/assets/slide2.jpg">
         <div className="inline-flex items-center gap-2 border border-rose-400/40 bg-rose-950/40 backdrop-blur-xl rounded-full px-4 py-1.5 text-xs font-bold tracking-widest uppercase text-rose-400 w-fit shadow-[0_0_15px_rgba(244,63,94,0.3)]">
           <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
           TENDER BOTTLENECK
@@ -206,7 +206,7 @@ export default function HomePage({ containerRef, onNavigateToLogin, onSlideInVie
       </FullscreenSlide>
 
       {/* SLIDE 3 — EMERALD */}
-      <FullscreenSlide id="section-2" slideNum={3} onSlideInView={onSlideInView}>
+      <FullscreenSlide id="section-2" slideNum={3} onSlideInView={onSlideInView} image="/assets/slide3.jpg">
         <div className="inline-flex items-center gap-2 border border-emerald-400/40 bg-emerald-950/40 backdrop-blur-xl rounded-full px-4 py-1.5 text-xs font-bold tracking-widest uppercase text-emerald-400 w-fit shadow-[0_0_15px_rgba(52,211,153,0.3)]">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           CAPABILITIES
@@ -251,7 +251,7 @@ export default function HomePage({ containerRef, onNavigateToLogin, onSlideInVie
       </FullscreenSlide>
 
       {/* SLIDE 4 — PURPLE */}
-      <FullscreenSlide id="section-3" slideNum={4} onSlideInView={onSlideInView}>
+      <FullscreenSlide id="section-3" slideNum={4} onSlideInView={onSlideInView} image="/assets/slide4.jpg">
         <div className="inline-flex items-center gap-2 border border-purple-400/40 bg-purple-950/40 backdrop-blur-xl rounded-full px-4 py-1.5 text-xs font-bold tracking-widest uppercase text-purple-400 w-fit shadow-[0_0_15px_rgba(168,85,247,0.3)]">
           <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
           PROTOCOL
@@ -290,7 +290,7 @@ export default function HomePage({ containerRef, onNavigateToLogin, onSlideInVie
       </FullscreenSlide>
 
       {/* SLIDE 5 — AMBER */}
-      <FullscreenSlide id="section-4" slideNum={5} onSlideInView={onSlideInView}>
+      <FullscreenSlide id="section-4" slideNum={5} onSlideInView={onSlideInView} image="/assets/slide5.jpg">
         <div className="inline-flex items-center gap-2 border border-amber-400/40 bg-amber-950/40 backdrop-blur-xl rounded-full px-4 py-1.5 text-xs font-bold tracking-widest uppercase text-amber-400 w-fit shadow-[0_0_15px_rgba(251,191,36,0.3)]">
           <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
           IMPACT METRICS
@@ -324,7 +324,7 @@ export default function HomePage({ containerRef, onNavigateToLogin, onSlideInVie
       </FullscreenSlide>
 
       {/* SLIDE 6 — INDIGO */}
-      <FullscreenSlide id="section-5" slideNum={6} onSlideInView={onSlideInView}>
+      <FullscreenSlide id="section-5" slideNum={6} onSlideInView={onSlideInView} image="/assets/slide6.jpg">
         <div className="inline-flex items-center gap-2 border border-indigo-400/40 bg-indigo-950/40 backdrop-blur-xl rounded-full px-4 py-1.5 text-xs font-bold tracking-widest uppercase text-indigo-400 w-fit shadow-[0_0_15px_rgba(99,102,241,0.3)]">
           <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
           DEPLOYMENT READY

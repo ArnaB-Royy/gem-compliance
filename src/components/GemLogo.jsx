@@ -1,5 +1,6 @@
 import React from 'react';
-import gemLogoSrc from '../assets/gem-logo.png';
+
+const gemLogoSrc = '/assets/gem-logo.png';
 
 export default function GemLogo({ height = 44, className = '' }) {
   return (
