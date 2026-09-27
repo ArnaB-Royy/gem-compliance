@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate } from 're
 import { AnimatePresence, motion } from 'framer-motion';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
+import VendorDashboard from './pages/vendor/VendorDashboard';
 import AppleSideNav from './components/AppleSideNav';
 import GemLogo from './components/GemLogo';
 
@@ -14,18 +15,14 @@ function AppContent() {
   const [activeIndex, setActiveIndex] = useState(0);
   const homeContainerRef = useRef(null);
 
-  // Directly receive slide index when a section enters the viewport
   const handleSlideInView = useCallback((index) => {
     setActiveIndex(index);
   }, []);
 
-  // IntersectionObserver to detect which slide is currently in view
   useEffect(() => {
     if (!isHomePage) return;
-
     const container = homeContainerRef.current;
     if (!container) return;
-
     const sections = container.querySelectorAll('section[data-slide-index]');
     if (!sections.length) return;
 
@@ -34,41 +31,38 @@ function AppContent() {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             const index = Number(entry.target.getAttribute('data-slide-index'));
-            if (!isNaN(index)) {
-              setActiveIndex(index);
-            }
+            if (!isNaN(index)) setActiveIndex(index);
           }
         });
       },
-      {
-        root: container,
-        threshold: 0.55, // Trigger when more than half of the slide is showing
-      }
+      { root: container, threshold: 0.55 }
     );
 
     sections.forEach((sec) => observer.observe(sec));
-
-    return () => {
-      observer.disconnect();
-    };
+    return () => observer.disconnect();
   }, [isHomePage]);
 
-  // Click smooth scroll handler
   const handleSelectSection = (index) => {
     setActiveIndex(index);
     const container = homeContainerRef.current;
     if (container) {
-      const height = container.clientHeight || window.innerHeight;
       container.scrollTo({
-        top: index * height,
+        top: index * (container.clientHeight || window.innerHeight),
         behavior: 'smooth',
       });
     }
   };
 
+  // Pages where we hide the home UI chrome
+  const isAuthOrDashboard =
+    location.pathname === '/login' ||
+    location.pathname.startsWith('/vendor') ||
+    location.pathname.startsWith('/officer');
+
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-[#030612]">
-      {/* GeM Brand Logo - Fixed top-left with Official Emblem */}
+
+      {/* GeM logo — home only */}
       {isHomePage && (
         <div className="fixed top-6 left-8 z-50">
           <Link
@@ -81,7 +75,7 @@ function AppContent() {
         </div>
       )}
 
-      {/* Top right quick login trigger button */}
+      {/* Login button — home only */}
       {isHomePage && (
         <div className="fixed top-6 right-8 z-50">
           <button
@@ -96,7 +90,7 @@ function AppContent() {
         </div>
       )}
 
-      {/* Apple / ROG Astral Compact Frosted Scroll Indicator */}
+      {/* Side nav — home only */}
       {isHomePage && (
         <AppleSideNav
           activeIndex={activeIndex}
@@ -104,9 +98,11 @@ function AppContent() {
         />
       )}
 
-      {/* PAGE TRANSITIONS */}
+      {/* Routes */}
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
+
+          {/* Home */}
           <Route
             path="/"
             element={
@@ -125,6 +121,8 @@ function AppContent() {
               </motion.div>
             }
           />
+
+          {/* Login */}
           <Route
             path="/login"
             element={
@@ -139,6 +137,41 @@ function AppContent() {
               </motion.div>
             }
           />
+
+          {/* Vendor Dashboard */}
+          <Route
+            path="/vendor/dashboard"
+            element={
+              <motion.div
+                initial={{ opacity: 0, x: 40 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -40 }}
+                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                className="w-full h-full"
+              >
+                <VendorDashboard />
+              </motion.div>
+            }
+          />
+
+          {/* Officer Dashboard — placeholder for next */}
+          <Route
+            path="/officer/dashboard"
+            element={
+              <motion.div
+                initial={{ opacity: 0, x: 40 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -40 }}
+                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                className="w-full h-full"
+              >
+                <div className="w-full h-full flex items-center justify-center bg-[#050A18]">
+                  <p className="text-white font-mono">Officer Dashboard — Coming Soon</p>
+                </div>
+              </motion.div>
+            }
+          />
+
         </Routes>
       </AnimatePresence>
     </div>
