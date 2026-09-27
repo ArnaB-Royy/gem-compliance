@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import VendorDashboard from './pages/vendor/VendorDashboard';
+import OfficerDashboard from './pages/officer/OfficerDashboard';
 import AppleSideNav from './components/AppleSideNav';
 import GemLogo from './components/GemLogo';
 
@@ -52,12 +53,6 @@ function AppContent() {
       });
     }
   };
-
-  // Pages where we hide the home UI chrome
-  const isAuthOrDashboard =
-    location.pathname === '/login' ||
-    location.pathname.startsWith('/vendor') ||
-    location.pathname.startsWith('/officer');
 
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-[#030612]">
@@ -154,7 +149,7 @@ function AppContent() {
             }
           />
 
-          {/* Officer Dashboard — placeholder for next */}
+          {/* Officer Dashboard */}
           <Route
             path="/officer/dashboard"
             element={
@@ -165,9 +160,7 @@ function AppContent() {
                 transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
                 className="w-full h-full"
               >
-                <div className="w-full h-full flex items-center justify-center bg-[#050A18]">
-                  <p className="text-white font-mono">Officer Dashboard — Coming Soon</p>
-                </div>
+                <OfficerDashboard />
               </motion.div>
             }
           />
