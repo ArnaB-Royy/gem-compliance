@@ -19,17 +19,39 @@ const MODELS = [
 ];
 console.log("Models in order:", MODELS.join(" -> "));
 
+const RULES = `Also add "confidence": an object giving "high", "medium" or "low" for each key.
+Use null for any field you cannot read. Do not guess.`;
+
 const PROMPTS = {
   gst: `You are reading an Indian GST Registration Certificate.
 Return ONLY JSON with these keys:
 gstin (printed as "Registration Number"), legalName, tradeName, address, registrationDate (the "Date of Liability" row, not the certificate issue date), constitution.
-Also add "confidence": an object giving "high", "medium" or "low" for each key.
-Use null for any field you cannot read. Do not guess.`,
+${RULES}`,
+
   pan: `You are reading an Indian PAN card.
 Return ONLY JSON with these keys:
-pan, name, fatherName, dob.
-Also add "confidence": an object giving "high", "medium" or "low" for each key.
-Use null for any field you cannot read. Do not guess.`,
+pan, name, fatherName, dob (date of birth, or date of incorporation for a company).
+${RULES}`,
+
+  udyam: `You are reading an Indian Udyam Registration Certificate.
+Return ONLY JSON with these keys:
+udyamNumber, enterpriseName, enterpriseType, majorActivity, address, registrationDate.
+${RULES}`,
+
+  epfo: `You are reading an Indian EPFO (Provident Fund) registration or compliance document.
+Return ONLY JSON with these keys:
+establishmentName, establishmentCode, address, dateOfCoverage.
+${RULES}`,
+
+  itr: `You are reading an Indian Income Tax Return acknowledgement (ITR-V).
+Return ONLY JSON with these keys:
+pan, name, assessmentYear, acknowledgementNumber, filingDate.
+${RULES}`,
+
+  oem: `You are reading an OEM authorization letter given to a dealer or vendor.
+Return ONLY JSON with these keys:
+oemName, authorizedVendorName, productsAuthorized, issueDate, validUntil, referenceNumber.
+${RULES}`,
 };
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -67,7 +89,9 @@ router.post("/", upload.single("file"), async (req, res) => {
 
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
     if (!PROMPTS[docType])
-      return res.status(400).json({ error: "docType must be 'gst' or 'pan'" });
+      return res
+        .status(400)
+        .json({ error: "docType must be gst, pan, udyam, epfo, itr or oem" });
     if (!process.env.GEMINI_API_KEY)
       return res.status(500).json({ error: "GEMINI_API_KEY missing in .env" });
 
