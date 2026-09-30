@@ -1,9 +1,17 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getRecord, saveExtraction, submitRecord, clearRecord, computeScore } from '../../utils/storage';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-const OCR_TIMEOUT_MS = 30000;
+
+// OCR retry settings (Render free tier can take ~50 s to wake up)
+const OCR_TIMEOUT_MS = 60000;
+const MAX_TRIES      = 4;
+const RETRY_WAIT_MS  = 4000;
+const RETRYABLE      = [502, 503, 504];
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const fail  = (msg, retryable) => Object.assign(new Error(msg), { retryable });
 
 const DOCS = [
   { id: 'gst',   title: 'GST Certificate',          sub: 'Proof of valid GST registration' },
@@ -53,6 +61,12 @@ const STEPS = ['Upload Documents', 'AI Verification', 'Officer Review', 'Result'
 
 // ── HELPERS ───────────────────────────────────────────────────
 const isEmpty = (v) => v === null || v === undefined || String(v).trim() === '';
+
+// Which screen to open for a saved record
+const screenFor = (rec) =>
+  rec.status === 'pending' ? 'verification'
+  : rec.status === 'approved' || rec.status === 'rejected' ? 'result'
+  : 'upload';
 
 // Which fields need a human to look at them
 const reviewFields = (entry, docId) =>
@@ -125,8 +139,8 @@ function buildMatch(ocr) {
   return { ref, rows, idChecks, overall };
 }
 
-// Generic OCR call: FormData, 30 s timeout, clear error messages
-async function callOcr(docType, file) {
+// One OCR attempt. Marks each error as retryable or not (400 is never retried).
+async function callOcrOnce(docType, file) {
   const fd = new FormData();
   fd.append('docType', docType);
   fd.append('file', file);
@@ -135,15 +149,34 @@ async function callOcr(docType, file) {
   try {
     const res = await fetch(`${API_URL}/api/ocr`, { method: 'POST', body: fd, signal: ctrl.signal });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error ? `${data.error}${res.status === 500 ? ' (Gemini busy?)' : ''}` : `Server error ${res.status}`);
+    if (!res.ok) {
+      const msg = data.error ? `${data.error}${res.status === 500 ? ' (Gemini busy?)' : ''}` : `Server error ${res.status}`;
+      throw fail(msg, RETRYABLE.includes(res.status));
+    }
     return data.fields || {};
   } catch (e) {
-    if (e.name === 'AbortError') throw new Error('Request timed out (30 s)');
-    if (e instanceof TypeError) throw new Error('Cannot reach backend. Is it running?');
+    if (e.name === 'AbortError') throw fail('Server is taking too long (still waking up?)', true);
+    if (e instanceof TypeError)  throw fail('Cannot reach backend (it may be waking up)', true);
     throw e;
   } finally {
     clearTimeout(timer);
   }
+}
+
+// Up to MAX_TRIES. Stops at the first success, so a document is never sent again.
+async function callOcr(docType, file, onRetry) {
+  let lastErr;
+  for (let attempt = 1; attempt <= MAX_TRIES; attempt++) {
+    try {
+      return await callOcrOnce(docType, file);
+    } catch (e) {
+      lastErr = e;
+      if (!e.retryable || attempt === MAX_TRIES) break;
+      onRetry?.(attempt);
+      await sleep(RETRY_WAIT_MS);
+    }
+  }
+  throw lastErr;
 }
 
 // ── SMALL SHARED UI ───────────────────────────────────────────
@@ -225,7 +258,7 @@ function OcrPanel({ docId, ocr, onRetry, onFallback }) {
       <div className="flex items-center gap-2 px-4 py-3">
         <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
           className="w-4 h-4 rounded-full border-2 border-[#00C2FF] border-t-transparent flex-shrink-0" />
-        <span className="text-xs font-mono text-[#00E5FF] font-semibold">AI Reading Document... (up to 30 s)</span>
+        <span className="text-xs font-mono text-[#00E5FF] font-semibold">{ocr.message || 'AI Reading Document...'}</span>
       </div>
     );
   }
@@ -455,22 +488,18 @@ function FuzzyMatchCard({ match }) {
   );
 }
 
-// ── RESULT STATE ───────────────────────────────────────────────
-function ResultState({ subId, breakdown, matchScore }) {
-  const avgDoc = Math.round(breakdown.reduce((s, b) => s + b.score, 0) / breakdown.length);
-  const score = Math.round(avgDoc * 0.6 + matchScore * 0.4);
-  const approved = score >= 70;
-  const flaggedCount = breakdown.filter((b) => b.status === 'flagged').length;
+// ── RESULT STATE (real officer decision from the saved record) ──
+function ResultState({ record }) {
+  const breakdown  = record.breakdown || [];
+  const matchScore = record.matchScore ?? 100;
+  const score      = record.score ?? computeScore(breakdown, matchScore);
+  const approved   = record.decision === 'approved';
 
-  const result = {
-    officer: 'Sr. Procurement Officer R. Sharma',
-    badge: 'PO-CPCL-2026-047',
-    remarks: approved
-      ? `Documents verified. Cross-document name match: ${matchScore}%. ${flaggedCount ? `${flaggedCount} document(s) had fields flagged for review but are within acceptable limits.` : 'No fields flagged.'} Vendor is eligible to participate in the CPCL tender.`
-      : `Cross-document name match is ${matchScore}% and ${flaggedCount} document(s) have flagged fields. Compliance score is below the eligibility threshold.`,
-  };
+  const officer = 'Sr. Procurement Officer R. Sharma';
+  const badge   = 'PO-CPCL-2026-047';
+  const remarks = record.remarks || 'No remarks recorded.';
+  const reviewedAt = record.decidedAt || '—';
 
-  const reviewedAt = new Date().toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   const scoreColor  = score >= 80 ? '#34D399' : score >= 50 ? '#FBBF24' : '#FB7185';
   const scoreBg     = score >= 80 ? 'rgba(52,211,153,0.12)' : score >= 50 ? 'rgba(251,191,36,0.12)' : 'rgba(244,63,94,0.12)';
   const scoreBorder = score >= 80 ? 'rgba(52,211,153,0.35)' : score >= 50 ? 'rgba(251,191,36,0.35)' : 'rgba(244,63,94,0.35)';
@@ -489,7 +518,7 @@ function ResultState({ subId, breakdown, matchScore }) {
           {approved ? 'Your submission meets all CPCL tender compliance requirements' : 'Your submission did not meet the compliance requirements'}
         </p>
         <div className="flex items-center justify-center gap-3 flex-wrap">
-          <span className="text-xs font-mono text-slate-300 px-3 py-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>ID: {subId}</span>
+          <span className="text-xs font-mono text-slate-300 px-3 py-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>ID: {record.subId}</span>
           <span className="text-xs font-mono text-slate-300 px-3 py-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>Reviewed: {reviewedAt}</span>
         </div>
       </motion.div>
@@ -518,12 +547,12 @@ function ResultState({ subId, breakdown, matchScore }) {
           style={{ background: 'rgba(168,85,247,0.08)', border: '1.5px solid rgba(168,85,247,0.3)', boxShadow: '0 0 24px rgba(168,85,247,0.1)' }}>
           <p className="text-xs font-mono text-purple-300 uppercase tracking-widest">Reviewed By</p>
           <div>
-            <p className="text-white text-sm font-bold">{result.officer}</p>
-            <p className="text-purple-300 text-xs font-mono mt-0.5">{result.badge}</p>
+            <p className="text-white text-sm font-bold">{officer}</p>
+            <p className="text-purple-300 text-xs font-mono mt-0.5">{badge}</p>
           </div>
           <div className="rounded-xl p-3 mt-1" style={{ background: 'rgba(168,85,247,0.08)', border: '1px solid rgba(168,85,247,0.2)' }}>
             <p className="text-xs font-mono text-slate-300 uppercase tracking-wider mb-1">Officer Remarks</p>
-            <p className="text-sm text-white leading-relaxed">{result.remarks}</p>
+            <p className="text-sm text-white leading-relaxed">{remarks}</p>
           </div>
         </div>
       </motion.div>
@@ -551,34 +580,32 @@ function ResultState({ subId, breakdown, matchScore }) {
         </div>
       </motion.div>
 
-      <PrivacyFooter text="Audit sealed · DPDPA Compliant · Tamper-proof result record" />
+      <PrivacyFooter text="Audit sealed · DPDPA Compliant · No document files stored" />
     </div>
   );
 }
 
 // ── AUDIT TRAIL ───────────────────────────────────────────────
-const generateAuditEntries = (baseTime, matchOk) => {
+const generateAuditEntries = (baseTime, matchOk, hash) => {
   const fmt = (d) => d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   const add = (sec) => { const d = new Date(baseTime); d.setSeconds(d.getSeconds() + sec); return fmt(d); };
   return [
-    { icon: '✅', text: 'Documents received and encrypted',        hash: '3f8a2b1c', color: 'emerald', time: add(0) },
-    { icon: '✅', text: 'Zero-trust hash generated for all files', hash: '9c1d4e7f', color: 'emerald', time: add(1) },
-    { icon: '✅', text: 'AI OCR extraction completed (Gemini Vision)', hash: '2b5f8a3d', color: 'cyan', time: add(2) },
-    { icon: '✅', text: 'GST Certificate verified',                hash: '7e1c9b4a', color: 'emerald', time: add(4) },
-    { icon: '✅', text: 'PAN Card verified',                       hash: '4d8f2e6c', color: 'emerald', time: add(5) },
-    { icon: '✅', text: 'Udyam Certificate verified',              hash: '1a5b9c3e', color: 'emerald', time: add(6) },
+    { icon: '✅', text: 'Documents received (files are not stored)',   hash: hash ? hash.toLowerCase() : null, color: 'emerald', time: add(0) },
+    { icon: '✅', text: 'AI OCR extraction completed (Gemini Vision)', hash: null, color: 'cyan', time: add(2) },
+    { icon: '✅', text: 'Extracted fields scored for confidence',      hash: null, color: 'emerald', time: add(4) },
     matchOk
-      ? { icon: '✅', text: 'Cross-document name verification passed', hash: '8c3f7d2b', color: 'emerald', time: add(7) }
-      : { icon: '⚠️', text: 'Name mismatch detected across documents', hash: '8c3f7d2b', color: 'amber', time: add(7) },
-    { icon: '✅', text: 'Cross-ministry blacklist check complete', hash: '5e9a1f4c', color: 'emerald', time: add(9) },
-    { icon: '🔄', text: 'Generating compliance score...',          hash: '6b2d8e5f', color: 'cyan',    time: add(11) },
-    { icon: '⏳', text: 'Awaiting officer review assignment',      hash: 'pending...', color: 'rose',  time: add(13) },
+      ? { icon: '✅', text: 'Cross-document name verification passed', hash: null, color: 'emerald', time: add(6) }
+      : { icon: '⚠️', text: 'Name mismatch detected across documents', hash: null, color: 'amber', time: add(6) },
+    { icon: '🧪', text: 'Cross-ministry blacklist check (simulated for demo)', hash: null, color: 'amber', time: add(8) },
+    { icon: '✅', text: 'Compliance score generated',                  hash: null, color: 'cyan', time: add(10) },
+    { icon: '⏳', text: 'Awaiting officer review',                     hash: 'pending...', color: 'rose', time: add(12) },
   ];
 };
 
-function VerificationState({ subId, subTime, matchOk, onSimulateResult }) {
-  const [visibleEntries, setVisibleEntries] = useState(0);
-  const [auditEntries] = useState(() => generateAuditEntries(new Date(), matchOk));
+function VerificationState({ subId, subTime, hash, baseTime, matchOk, animate }) {
+  const [auditEntries] = useState(() => generateAuditEntries(baseTime, matchOk, hash));
+  // after a refresh (animate = false) show the whole trail at once
+  const [visibleEntries, setVisibleEntries] = useState(animate ? 0 : auditEntries.length);
   const allDone = visibleEntries >= auditEntries.length;
 
   useEffect(() => {
@@ -598,7 +625,7 @@ function VerificationState({ subId, subTime, matchOk, onSimulateResult }) {
     <div className="flex flex-col gap-6 w-full max-w-3xl mx-auto py-10 px-6">
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-center">
         <h1 className="text-3xl font-black text-white">Verification In Progress</h1>
-        <p className="text-slate-200 text-sm mt-2">Our AI is analyzing your documents for compliance</p>
+        <p className="text-slate-200 text-sm mt-2">Our AI has analyzed your documents for compliance</p>
         <div className="flex items-center justify-center gap-4 mt-3">
           <span className="text-sm font-mono text-[#00E5FF] font-bold">ID: {subId}</span>
           <span className="text-slate-500">·</span>
@@ -617,8 +644,12 @@ function VerificationState({ subId, subTime, matchOk, onSimulateResult }) {
                 <span className="text-sm flex-shrink-0">{entry.icon}</span>
                 <span className="text-xs font-medium flex-1" style={{ color: c.text }}>{entry.text}</span>
                 <span className="text-[10px] font-mono text-slate-400 flex-shrink-0 mr-1">{entry.time}</span>
-                <span className="text-[10px] font-mono font-bold flex-shrink-0 px-2 py-0.5 rounded-md"
-                  style={{ background: c.hashBg, color: c.hashText, border: `1px solid ${c.hashBorder}` }}>#{entry.hash}</span>
+                {entry.hash && (
+                  <span className="text-[10px] font-mono font-bold flex-shrink-0 px-2 py-0.5 rounded-md"
+                    style={{ background: c.hashBg, color: c.hashText, border: `1px solid ${c.hashBorder}` }}>
+                    {entry.hash === 'pending...' ? entry.hash : `#${entry.hash}`}
+                  </span>
+                )}
               </motion.div>
             );
           })}
@@ -661,22 +692,20 @@ function VerificationState({ subId, subTime, matchOk, onSimulateResult }) {
       <AnimatePresence>
         {allDone && (
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.5 }}
-            className="rounded-2xl p-5" style={{ background: 'rgba(168,85,247,0.07)', border: '1.5px solid rgba(168,85,247,0.35)', boxShadow: '0 0 32px rgba(168,85,247,0.12)' }}>
-            <p className="text-white text-sm font-black">Awaiting Officer Review</p>
-            <p className="text-purple-300 text-xs font-mono mt-1">Sr. Procurement Officer R. Sharma · PO-CPCL-2026-047 has been assigned to review your submission.</p>
-            <p className="text-slate-400 text-xs mt-2">In a live deployment the officer logs into their portal, reviews each document and score, then approves or rejects the bid. Click below to simulate what happens after the officer completes their review.</p>
-            <motion.button onClick={onSimulateResult}
-              animate={{ boxShadow: ['0 0 0px rgba(168,85,247,0)', '0 0 28px rgba(168,85,247,0.5)', '0 0 0px rgba(168,85,247,0)'] }}
-              transition={{ repeat: Infinity, duration: 2 }} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-              className="mt-4 w-full py-3 rounded-xl font-black text-sm cursor-pointer"
-              style={{ background: 'linear-gradient(135deg,#A855F7,#6366F1)', color: '#fff' }}>
-              Simulate Officer Review — See Result
-            </motion.button>
+            className="rounded-2xl py-8 px-5 flex flex-col items-center gap-3 text-center"
+            style={{ background: 'rgba(168,85,247,0.07)', border: '1.5px solid rgba(168,85,247,0.35)', boxShadow: '0 0 32px rgba(168,85,247,0.12)' }}>
+            <motion.span
+              animate={{ rotate: [0, 0, 180, 180, 360] }}
+              transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
+              className="text-4xl inline-block">
+              ⏳
+            </motion.span>
+            <p className="text-white text-lg font-black">Waiting for officer review</p>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <PrivacyFooter text="Processed in memory only · DPDPA Compliant · No documents stored" />
+      <PrivacyFooter text="No document files stored · Only extracted text results are kept · DPDPA Compliant" />
     </div>
   );
 }
@@ -686,9 +715,9 @@ export default function VendorDashboard() {
   const navigate              = useNavigate();
   const [files, setFiles]     = useState({});
   const [ocr, setOcr]         = useState({});
-  const [state, setState]     = useState('upload');
-  const [subId, setSubId]     = useState('');
-  const [subTime, setSubTime] = useState('');
+  const [record, setRecord]   = useState(() => getRecord());          // saved submission (localStorage)
+  const [state, setState]     = useState(() => screenFor(getRecord())); // screen comes from saved status
+  const [animateAudit, setAnimateAudit] = useState(false);            // true only right after Submit
   const [activeStep]          = useState(0);
 
   const filesRef = useRef({});                  // latest file per doc (to ignore stale results)
@@ -700,11 +729,29 @@ export default function VendorDashboard() {
 
   const match = useMemo(() => buildMatch(ocr), [ocr]);
 
+  // When the officer decides in another tab (or this tab regains focus), refresh the record
+  useEffect(() => {
+    const refresh = () => {
+      const rec = getRecord();
+      setRecord(rec);
+      setState((s) => (s === 'verification' && (rec.status === 'approved' || rec.status === 'rejected') ? 'result' : s));
+    };
+    window.addEventListener('storage', refresh);
+    window.addEventListener('focus', refresh);
+    return () => {
+      window.removeEventListener('storage', refresh);
+      window.removeEventListener('focus', refresh);
+    };
+  }, []);
+
   const processDoc = async (id, file) => {
     if (filesRef.current[id] !== file) return;            // removed or replaced while waiting in queue
     setOcr((o) => ({ ...o, [id]: { loading: true } }));
     try {
-      const fields = await callOcr(id, file);
+      const fields = await callOcr(id, file, () => {
+        if (filesRef.current[id] !== file) return;
+        setOcr((o) => ({ ...o, [id]: { loading: true, message: 'Warming up secure server...' } }));
+      });
       if (filesRef.current[id] !== file) return;
       const { confidence = {}, ...values } = fields;
       setOcr((o) => ({ ...o, [id]: { loading: false, values, confidence } }));
@@ -738,6 +785,7 @@ export default function VendorDashboard() {
   };
 
   const handleRetry = (id) => {
+    if (ocr[id]?.loading) return;                          // block double-clicks
     const file = filesRef.current[id];
     if (!file) return;
     setOcr((o) => ({ ...o, [id]: { loading: true } }));
@@ -763,11 +811,24 @@ export default function VendorDashboard() {
   const matchScore = match.overall ?? 100;
 
   const handleSubmit = () => {
-    if (!allReady) return;
+    if (!allReady || state !== 'upload') return;
     setState('submitting');
-    setSubId(`SUB-2026-CPCL-${Math.floor(100000 + Math.random() * 900000)}`);
-    setSubTime(new Date().toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+    setAnimateAudit(true);
+    saveExtraction({ ocr, breakdown, matchScore });   // extracted text + scores only, never the files
+    setRecord(submitRecord());                        // status -> pending, creates ID, time, hash
     setTimeout(() => setState('verification'), 1800);
+  };
+
+  // "Start fresh demo": wipe the saved record and reset this page
+  const handleStartFresh = () => {
+    clearRecord();
+    filesRef.current = {};
+    queueRef.current = Promise.resolve();
+    setFiles({});
+    setOcr({});
+    setRecord(getRecord());
+    setAnimateAudit(false);
+    setState('upload');
   };
 
   return (
@@ -780,7 +841,7 @@ export default function VendorDashboard() {
       {/* HEADER */}
       <header className="flex-shrink-0 flex items-center px-8 z-50 relative"
         style={{ height: '64px', background: 'rgba(5,10,24,0.9)', backdropFilter: 'blur(24px)', borderBottom: '1px solid rgba(0,194,255,0.18)', boxShadow: '0 1px 40px rgba(0,194,255,0.1)' }}>
-        <div style={{ width: '240px', flexShrink: 0 }}>
+        <div style={{ width: '340px', flexShrink: 0 }}>
           <img src="/assets/gem-logo.png" alt="GeM" style={{ height: 44, cursor: 'pointer' }} onClick={() => navigate('/')} />
         </div>
         <div className="flex-1 flex items-center justify-center gap-2">
@@ -788,8 +849,14 @@ export default function VendorDashboard() {
             className="w-2 h-2 rounded-full bg-[#00E5FF]" style={{ boxShadow: '0 0 8px rgba(0,229,255,0.8)' }} />
           <span className="text-white font-black text-lg tracking-wide">Vendor Portal</span>
         </div>
-        <div style={{ width: '240px', flexShrink: 0 }} className="flex items-center justify-end gap-4">
+        <div style={{ width: '340px', flexShrink: 0 }} className="flex items-center justify-end gap-3">
           <span className="text-slate-300 text-sm font-mono">vendor@cpcl.gov.in</span>
+          <button onClick={handleStartFresh}
+            title="Clear the saved demo data and start over"
+            className="px-3 py-1.5 rounded-lg text-xs font-bold font-mono cursor-pointer transition-all hover:brightness-125"
+            style={{ background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)', color: '#FBBF24' }}>
+            ↺ Start fresh
+          </button>
           <button onClick={() => navigate('/login')}
             className="px-4 py-1.5 rounded-lg text-sm font-bold font-mono cursor-pointer transition-all hover:brightness-125"
             style={{ background: 'rgba(45,107,228,0.2)', border: '1px solid rgba(0,194,255,0.4)', color: '#00E5FF', boxShadow: '0 0 14px rgba(45,107,228,0.25)' }}>
@@ -872,10 +939,17 @@ export default function VendorDashboard() {
           )}
 
           {state === 'verification' && (
-            <VerificationState subId={subId} subTime={subTime} matchOk={matchScore >= 85} onSimulateResult={() => setState('result')} />
+            <VerificationState
+              subId={record.subId}
+              subTime={record.subTime}
+              hash={record.hash}
+              baseTime={record.updatedAt}
+              matchOk={(record.matchScore ?? 100) >= 85}
+              animate={animateAudit}
+            />
           )}
 
-          {state === 'result' && <ResultState subId={subId} breakdown={breakdown} matchScore={matchScore} />}
+          {state === 'result' && <ResultState record={record} />}
         </main>
       </div>
 

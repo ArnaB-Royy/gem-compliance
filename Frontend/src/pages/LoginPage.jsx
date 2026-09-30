@@ -25,7 +25,7 @@ export default function LoginPage() {
   const [confirm, setConfirm]   = useState('');
   const [hovered, setHovered]   = useState(null);
   const [filling, setFilling]   = useState(false);
-  const [activeField, setActiveField] = useState(null); // which field is currently typing
+  const [activeField, setActiveField] = useState(null);
   const intervalRef = useRef(null);
   const navigate = useNavigate();
 
@@ -34,12 +34,10 @@ export default function LoginPage() {
   const accent    = isOfficer ? '#A855F7' : '#00E5FF';
   const accentRGB = isOfficer ? '168,85,247' : '0,229,255';
 
-  // Clear all intervals on unmount
   useEffect(() => {
     return () => clearInterval(intervalRef.current);
   }, []);
 
-  // Typing helper — types one string into a setter, then calls onDone
   const typeString = (str, setter, speed, onDone, fieldName) => {
     let i = 0;
     setter('');
@@ -55,7 +53,6 @@ export default function LoginPage() {
     }, speed);
   };
 
-  // Chain: name → email → password → confirm (register) or email → password (login)
   const startFill = (type, currentMode) => {
     const data = PORTAL_DATA[type];
     clearInterval(intervalRef.current);
@@ -91,6 +88,19 @@ export default function LoginPage() {
     startFill(type, mode);
   };
 
+  // Collapse back to the two-option state
+  const handleReset = () => {
+    clearInterval(intervalRef.current);
+    setSelected(null);
+    setMode('login');
+    setName('');
+    setEmail('');
+    setPassword('');
+    setConfirm('');
+    setActiveField(null);
+    setFilling(false);
+  };
+
   const handleModeSwitch = (m) => {
     setMode(m);
     setName('');
@@ -100,7 +110,6 @@ export default function LoginPage() {
     setActiveField(null);
     setFilling(false);
     clearInterval(intervalRef.current);
-    // if a portal already selected, re-fill for new mode
     if (selected) {
       setTimeout(() => startFill(selected, m), 100);
     }
@@ -153,7 +162,6 @@ export default function LoginPage() {
     ? '0 0 50px rgba(0,229,255,0.25), 0 0 100px rgba(0,229,255,0.12)'
     : '0 0 50px rgba(99,102,241,0.15), 0 0 100px rgba(99,102,241,0.07)';
 
-  // Blinking cursor shown inside a field while it's actively typing
   const Cursor = ({ field }) =>
     activeField === field ? (
       <motion.div
@@ -208,9 +216,14 @@ export default function LoginPage() {
 
       {/* ── OUTER BOX ── */}
       <motion.div
+        layout
         initial={{ opacity: 0, scale: 0.95, y: 24 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+        transition={{
+          duration: 0.55,
+          ease: [0.16, 1, 0.3, 1],
+          layout: { duration: 0.5, ease: [0.16, 1, 0.3, 1] },
+        }}
         className="relative z-10 w-full max-w-[440px] mx-4 rounded-3xl p-6"
         style={{
           background: 'linear-gradient(160deg, #0B1120 0%, #080D1A 60%, #060A15 100%)',
@@ -242,7 +255,7 @@ export default function LoginPage() {
         </div>
 
         {/* ── PORTAL CARDS ── */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="grid grid-cols-2 gap-3">
           {portals.map(({ type, label, sub, accent: ac, rgb, icon }) => {
             const active  = selected === type;
             const isHover = hovered === type;
@@ -326,160 +339,184 @@ export default function LoginPage() {
           })}
         </div>
 
-        {/* ── FORM BOX ── */}
-        <div
-          className="rounded-2xl p-4"
-          style={{ background: 'rgba(4,8,20,0.8)', border: '1px solid rgba(255,255,255,0.06)' }}
-        >
-          {/* Toggle */}
-          <div className="flex rounded-xl overflow-hidden mb-4" style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
-            {['login', 'register'].map((m) => (
-              <motion.button
-                key={m}
-                type="button"
-                onClick={() => handleModeSwitch(m)}
-                whileTap={{ scale: 0.97 }}
-                className="flex-1 py-2.5 text-xs font-mono font-bold capitalize tracking-widest transition-all duration-300 cursor-pointer"
-                style={{
-                  background: mode === m ? (selected ? accent : '#6366F1') : 'transparent',
-                  color: mode === m ? (isVendor ? '#000' : '#fff') : 'rgba(255,255,255,0.3)',
-                }}
-              >
-                {m}
-              </motion.button>
-            ))}
-          </div>
-
-          <form onSubmit={handleSubmit} className="flex flex-col gap-2.5">
-
-            {/* Name — register only */}
-            <AnimatePresence>
-              {mode === 'register' && (
-                <motion.div
-                  key="name-field"
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 48 }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.25 }}
-                  className="relative"
-                >
-                  <input
-                    type="text"
-                    placeholder="Full Name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className={inputClass}
-                    style={{ height: 48 }}
-                    onFocus={(e) => (e.target.style.borderColor = accent)}
-                    onBlur={(e)  => (e.target.style.borderColor = 'rgba(255,255,255,0.08)')}
-                  />
-                  <Cursor field="name" />
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Email */}
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Official Email / Government ID"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className={inputClass}
-                onFocus={(e) => (e.target.style.borderColor = accent)}
-                onBlur={(e)  => (e.target.style.borderColor = 'rgba(255,255,255,0.08)')}
-              />
-              <Cursor field="email" />
-            </div>
-
-            {/* Password */}
-            <div className="relative">
-              <input
-                type="password"
-                placeholder="••••••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className={inputClass}
-                onFocus={(e) => (e.target.style.borderColor = accent)}
-                onBlur={(e)  => (e.target.style.borderColor = 'rgba(255,255,255,0.08)')}
-              />
-              <Cursor field="password" />
-            </div>
-
-            {/* Confirm — register only */}
-            <AnimatePresence>
-              {mode === 'register' && (
-                <motion.div
-                  key="confirm-field"
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 48 }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.25 }}
-                  className="relative"
-                >
-                  <input
-                    type="password"
-                    placeholder="Confirm Password"
-                    value={confirm}
-                    onChange={(e) => setConfirm(e.target.value)}
-                    className={inputClass}
-                    style={{ height: 48 }}
-                    onFocus={(e) => (e.target.style.borderColor = accent)}
-                    onBlur={(e)  => (e.target.style.borderColor = 'rgba(255,255,255,0.08)')}
-                  />
-                  <Cursor field="confirm" />
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Submit */}
-            <motion.button
-              type="submit"
-              whileHover={selected && !filling ? { scale: 1.02, boxShadow: `0 0 36px rgba(${accentRGB},0.55)` } : {}}
-              whileTap={selected && !filling ? { scale: 0.97 } : {}}
-              className="w-full py-3 rounded-xl font-black text-sm tracking-wide mt-1 transition-colors duration-300"
-              style={{
-                background: selected
-                  ? `linear-gradient(135deg, ${accent} 0%, ${isOfficer ? '#6B21A8' : '#2D6BE4'} 100%)`
-                  : 'rgba(255,255,255,0.05)',
-                color:     selected ? (isVendor ? '#000' : '#fff') : 'rgba(255,255,255,0.2)',
-                boxShadow: selected && !filling ? `0 0 28px rgba(${accentRGB},0.35)` : 'none',
-                cursor:    selected && !filling ? 'pointer' : 'not-allowed',
-              }}
+        {/* ── FORM BOX (only after a portal is chosen) ── */}
+        <AnimatePresence initial={false}>
+          {selected && (
+            <motion.div
+              key="form-wrapper"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+              style={{ overflow: 'hidden' }}
             >
-              {filling ? (
-                <motion.span
-                  animate={{ opacity: [0.5, 1, 0.5] }}
-                  transition={{ repeat: Infinity, duration: 1 }}
+              {/* padding lives inside so height can animate from 0 cleanly */}
+              <div className="pt-4">
+                <div
+                  className="rounded-2xl p-4"
+                  style={{ background: 'rgba(4,8,20,0.8)', border: '1px solid rgba(255,255,255,0.06)' }}
                 >
-                  {mode === 'register' ? 'Setting up account...' : 'Authenticating...'}
-                </motion.span>
-              ) : (
-                mode === 'login' ? 'Sign In' : 'Create Account'
-              )}
-            </motion.button>
-          </form>
+                  {/* Change portal */}
+                  <button
+                    type="button"
+                    onClick={handleReset}
+                    className="mb-3 inline-flex items-center gap-1.5 text-[10px] font-mono font-bold tracking-wider cursor-pointer transition-opacity hover:opacity-100"
+                    style={{ color: accent, opacity: 0.7 }}
+                  >
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    Change portal
+                  </button>
 
-          {/* Hint */}
-          <div className="mt-3 text-center min-h-[14px]">
-            {selected && !filling ? (
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-[10px] font-mono"
-                style={{ color: `rgba(${accentRGB},0.45)` }}
-              >
-                {mode === 'login'
-                  ? `Click Sign In to continue as ${selected}`
-                  : `Click Create Account to continue as ${selected}`}
-              </motion.p>
-            ) : !selected ? (
-              <p className="text-[10px] font-mono text-indigo-500/60 tracking-wide">
-                Select a portal above to continue
-              </p>
-            ) : null}
-          </div>
-        </div>
+                  {/* Toggle */}
+                  <div className="flex rounded-xl overflow-hidden mb-4" style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
+                    {['login', 'register'].map((m) => (
+                      <motion.button
+                        key={m}
+                        type="button"
+                        onClick={() => handleModeSwitch(m)}
+                        whileTap={{ scale: 0.97 }}
+                        className="flex-1 py-2.5 text-xs font-mono font-bold capitalize tracking-widest transition-all duration-300 cursor-pointer"
+                        style={{
+                          background: mode === m ? accent : 'transparent',
+                          color: mode === m ? (isVendor ? '#000' : '#fff') : 'rgba(255,255,255,0.3)',
+                        }}
+                      >
+                        {m}
+                      </motion.button>
+                    ))}
+                  </div>
+
+                  <form onSubmit={handleSubmit} className="flex flex-col gap-2.5">
+
+                    {/* Name — register only */}
+                    <AnimatePresence>
+                      {mode === 'register' && (
+                        <motion.div
+                          key="name-field"
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 48 }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.25 }}
+                          className="relative"
+                        >
+                          <input
+                            type="text"
+                            placeholder="Full Name"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            className={inputClass}
+                            style={{ height: 48 }}
+                            onFocus={(e) => (e.target.style.borderColor = accent)}
+                            onBlur={(e)  => (e.target.style.borderColor = 'rgba(255,255,255,0.08)')}
+                          />
+                          <Cursor field="name" />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    {/* Email */}
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="Official Email / Government ID"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className={inputClass}
+                        onFocus={(e) => (e.target.style.borderColor = accent)}
+                        onBlur={(e)  => (e.target.style.borderColor = 'rgba(255,255,255,0.08)')}
+                      />
+                      <Cursor field="email" />
+                    </div>
+
+                    {/* Password */}
+                    <div className="relative">
+                      <input
+                        type="password"
+                        placeholder="••••••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className={inputClass}
+                        onFocus={(e) => (e.target.style.borderColor = accent)}
+                        onBlur={(e)  => (e.target.style.borderColor = 'rgba(255,255,255,0.08)')}
+                      />
+                      <Cursor field="password" />
+                    </div>
+
+                    {/* Confirm — register only */}
+                    <AnimatePresence>
+                      {mode === 'register' && (
+                        <motion.div
+                          key="confirm-field"
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 48 }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.25 }}
+                          className="relative"
+                        >
+                          <input
+                            type="password"
+                            placeholder="Confirm Password"
+                            value={confirm}
+                            onChange={(e) => setConfirm(e.target.value)}
+                            className={inputClass}
+                            style={{ height: 48 }}
+                            onFocus={(e) => (e.target.style.borderColor = accent)}
+                            onBlur={(e)  => (e.target.style.borderColor = 'rgba(255,255,255,0.08)')}
+                          />
+                          <Cursor field="confirm" />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    {/* Submit */}
+                    <motion.button
+                      type="submit"
+                      whileHover={!filling ? { scale: 1.02, boxShadow: `0 0 36px rgba(${accentRGB},0.55)` } : {}}
+                      whileTap={!filling ? { scale: 0.97 } : {}}
+                      className="w-full py-3 rounded-xl font-black text-sm tracking-wide mt-1 transition-colors duration-300"
+                      style={{
+                        background: `linear-gradient(135deg, ${accent} 0%, ${isOfficer ? '#6B21A8' : '#2D6BE4'} 100%)`,
+                        color:     isVendor ? '#000' : '#fff',
+                        boxShadow: !filling ? `0 0 28px rgba(${accentRGB},0.35)` : 'none',
+                        cursor:    !filling ? 'pointer' : 'not-allowed',
+                        opacity:   filling ? 0.85 : 1,
+                      }}
+                    >
+                      {filling ? (
+                        <motion.span
+                          animate={{ opacity: [0.5, 1, 0.5] }}
+                          transition={{ repeat: Infinity, duration: 1 }}
+                        >
+                          {mode === 'register' ? 'Setting up account...' : 'Authenticating...'}
+                        </motion.span>
+                      ) : (
+                        mode === 'login' ? 'Sign In' : 'Create Account'
+                      )}
+                    </motion.button>
+                  </form>
+
+                  {/* Hint */}
+                  <div className="mt-3 text-center min-h-[14px]">
+                    {!filling && (
+                      <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="text-[10px] font-mono"
+                        style={{ color: `rgba(${accentRGB},0.45)` }}
+                      >
+                        {mode === 'login'
+                          ? `Click Sign In to continue as ${selected}`
+                          : `Click Create Account to continue as ${selected}`}
+                      </motion.p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
     </motion.div>
   );

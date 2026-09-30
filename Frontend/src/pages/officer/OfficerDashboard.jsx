@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getRecord, decide, toOfficerVendor, clearRecord } from '../../utils/storage';
 
 // ── COLORS (ShipSense-inspired, purple accent) ────────────────
 const C = {
@@ -23,7 +24,7 @@ const C = {
   borderLight: 'rgba(255,255,255,0.06)',
 };
 
-// ── MOCK DATA ─────────────────────────────────────────────────
+// ── BUILT-IN SAMPLE VENDORS (always shown; a live submission is added on top) ──
 const VENDORS = [
   {
     id: 'SUB-2026-CPCL-482910',
@@ -213,10 +214,10 @@ function Sidebar({ filter, setFilter, stats, onBack, showBack }) {
         {/* Innovation badges */}
         <div className="mt-auto flex flex-col gap-2">
           {[
-            { icon: '🔒', label: 'DPDPA Compliant', color: C.cyan,   bg: 'rgba(0,229,255,0.1)',   border: 'rgba(0,229,255,0.25)'   },
-            { icon: '⚡', label: 'Offline First',    color: C.purple, bg: C.purpleLight,            border: C.purpleBorder           },
-            { icon: '🛡️', label: 'Zero Trust',       color: C.green,  bg: 'rgba(52,211,153,0.1)',  border: 'rgba(52,211,153,0.25)'  },
-            { icon: '🧠', label: 'Explainable AI',   color: C.amber,  bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.25)'  },
+            { icon: '🔒', label: 'DPDPA Compliant',     color: C.cyan,   bg: 'rgba(0,229,255,0.1)',   border: 'rgba(0,229,255,0.25)'   },
+            { icon: '⚡', label: 'Offline First',        color: C.purple, bg: C.purpleLight,            border: C.purpleBorder           },
+            { icon: '🛡️', label: 'Zero Trust',           color: C.green,  bg: 'rgba(52,211,153,0.1)',  border: 'rgba(52,211,153,0.25)'  },
+            { icon: '🧠', label: 'Explainable Scoring',  color: C.amber,  bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.25)'  },
           ].map(({ icon, label, color, bg, border }) => (
             <div
               key={label}
@@ -238,6 +239,7 @@ function VendorRow({ vendor, onView, decision, index }) {
   const sc = vendor.score;
   const decided = decision !== undefined;
   const approved = decision === 'approved';
+  const live = !!vendor.live;
 
   return (
     <motion.div
@@ -254,18 +256,18 @@ function VendorRow({ vendor, onView, decision, index }) {
         alignItems: 'center',
         padding: '14px 20px',
         borderBottom: `1px solid ${C.borderLight}`,
-        background: hovered ? 'rgba(168,85,247,0.06)' : 'transparent',
+        background: hovered ? 'rgba(168,85,247,0.06)' : live ? 'rgba(0,229,255,0.05)' : 'transparent',
         paddingLeft: hovered ? '28px' : '20px',
         transition: 'all 0.2s ease',
       }}
     >
-      {/* Left accent bar on hover */}
+      {/* Left accent bar (always on for the live submission, on hover for the rest) */}
       <div
         style={{
           position: 'absolute',
           left: 0, top: 0, bottom: 0,
-          width: hovered ? '3px' : '0px',
-          background: `linear-gradient(to bottom, ${C.purple}, #6366F1)`,
+          width: hovered || live ? '3px' : '0px',
+          background: live ? C.cyan : `linear-gradient(to bottom, ${C.purple}, #6366F1)`,
           borderRadius: '0 2px 2px 0',
           transition: 'width 0.2s ease',
         }}
@@ -284,6 +286,22 @@ function VendorRow({ vendor, onView, decision, index }) {
           >
             {vendor.name}
           </p>
+          {live && (
+            <span
+              className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-full flex-shrink-0"
+              style={{ background: 'rgba(0,229,255,0.12)', border: '1px solid rgba(0,229,255,0.4)', color: C.cyan }}
+            >
+              LIVE
+            </span>
+          )}
+          {!live && (
+            <span
+              className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-full flex-shrink-0"
+              style={{ background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)', color: C.amber }}
+            >
+              SAMPLE
+            </span>
+          )}
           {decided && (
             <span
               className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-full flex-shrink-0"
@@ -355,7 +373,7 @@ function VendorRow({ vendor, onView, decision, index }) {
 }
 
 // ── VENDOR LIST VIEW ──────────────────────────────────────────
-function VendorList({ vendors, decisions, onView, filter }) {
+function VendorList({ vendors, decisions, onView, filter, hasLive }) {
   const filtered = vendors.filter((v) => {
     if (filter === 'all')      return true;
     if (filter === 'approved') return decisions[v.id] === 'approved';
@@ -401,6 +419,7 @@ function VendorList({ vendors, decisions, onView, filter }) {
         </h1>
         <p className="text-sm mt-1" style={{ color: C.inkLight }}>
           {filtered.length} vendor{filtered.length !== 1 ? 's' : ''} {filter === 'all' ? 'in queue' : `· ${filter}`}
+          {!hasLive && ' · no live vendor submission in this browser yet'}
         </p>
       </div>
 
@@ -464,19 +483,22 @@ function VendorDetail({ vendor, onBack, onDecision, decision }) {
   const sc = vendor.score;
 
   const handleDecision = (type) => {
-    if (!remarks.trim()) return;
+    if (!remarks.trim() || deciding) return;
     setDeciding(true);
     setTimeout(() => {
-      const hash = Math.random().toString(16).slice(2, 10).toUpperCase();
-      const ts   = new Date().toLocaleString('en-IN', {
+      // onDecision saves the decision (live vendor -> localStorage) and may return the saved time/hash
+      const saved = onDecision(vendor.id, type, remarks.trim());
+      const hash = saved?.hash || Math.random().toString(16).slice(2, 10).toUpperCase();
+      const ts   = saved?.ts || new Date().toLocaleString('en-IN', {
         day: '2-digit', month: 'short', year: 'numeric',
         hour: '2-digit', minute: '2-digit', second: '2-digit',
       });
       setStamp({ type, hash, ts });
       setDeciding(false);
-      onDecision(vendor.id, type);
     }, 1500);
   };
+
+  const isApproved = stamp?.type === 'approved' || decision === 'approved';
 
   return (
     <motion.div
@@ -510,6 +532,11 @@ function VendorDetail({ vendor, onBack, onDecision, decision }) {
             <p className="text-xs font-mono mt-1" style={{ color: C.inkLight }}>
               {vendor.id} · {vendor.submittedAt}
             </p>
+            {!vendor.live && (
+              <p className="text-[10px] font-mono mt-1" style={{ color: C.amber }}>
+                ⚠️ Sample data for demonstration. Not a real submission.
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-3 flex-shrink-0">
             <div
@@ -551,7 +578,7 @@ function VendorDetail({ vendor, onBack, onDecision, decision }) {
           >
             <span className="text-sm w-5 flex-shrink-0">{docIcon(doc.status)}</span>
             <p className="text-sm text-white font-bold w-44 flex-shrink-0">{doc.label}</p>
-            <p className="text-xs font-mono flex-1" style={{ color: C.inkMid }}>{doc.value}</p>
+            <p className="text-xs font-mono flex-1 break-words" style={{ color: C.inkMid }}>{doc.value}</p>
             <div className="flex items-center gap-2 w-32 flex-shrink-0">
               <div className="flex-1 h-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.05)' }}>
                 <motion.div
@@ -618,7 +645,7 @@ function VendorDetail({ vendor, onBack, onDecision, decision }) {
         </div>
       </motion.div>
 
-      {/* AI Recommendation */}
+      {/* Rule-based assessment */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -641,12 +668,12 @@ function VendorDetail({ vendor, onBack, onDecision, decision }) {
             </svg>
           </div>
           <p className="text-xs font-mono font-bold uppercase tracking-widest" style={{ color: C.purple }}>
-            AI Recommendation — Explainable AI (XAI)
+            Rule-Based Assessment
           </p>
         </div>
         <p className="text-sm leading-relaxed" style={{ color: C.inkMid }}>{vendor.ai}</p>
         <p className="text-[10px] font-mono mt-3 pt-3" style={{ color: 'rgba(168,85,247,0.5)', borderTop: `1px solid ${C.purpleBorder}` }}>
-          Generated by GeM Verify AI Engine · Confidence Calibrated · Not a final decision
+          Automated summary from extracted data and scoring rules · Advisory only · Not a final decision
         </p>
       </motion.div>
 
@@ -718,10 +745,8 @@ function VendorDetail({ vendor, onBack, onDecision, decision }) {
             transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
             className="rounded-2xl p-5"
             style={{
-              background: stamp?.type === 'approved' || decision === 'approved'
-                ? 'rgba(52,211,153,0.08)' : 'rgba(244,63,94,0.08)',
-              border: `1.5px solid ${stamp?.type === 'approved' || decision === 'approved'
-                ? 'rgba(52,211,153,0.4)' : 'rgba(244,63,94,0.4)'}`,
+              background: isApproved ? 'rgba(52,211,153,0.08)' : 'rgba(244,63,94,0.08)',
+              border: `1.5px solid ${isApproved ? 'rgba(52,211,153,0.4)' : 'rgba(244,63,94,0.4)'}`,
             }}
           >
             <div className="flex items-center gap-3 mb-4">
@@ -729,16 +754,13 @@ function VendorDetail({ vendor, onBack, onDecision, decision }) {
                 animate={{ scale: [1, 1.1, 1] }}
                 transition={{ repeat: Infinity, duration: 2 }}
                 className="w-10 h-10 rounded-xl flex items-center justify-center text-xl"
-                style={{
-                  background: stamp?.type === 'approved' || decision === 'approved'
-                    ? 'rgba(52,211,153,0.15)' : 'rgba(244,63,94,0.15)',
-                }}
+                style={{ background: isApproved ? 'rgba(52,211,153,0.15)' : 'rgba(244,63,94,0.15)' }}
               >
-                {stamp?.type === 'approved' || decision === 'approved' ? '✅' : '❌'}
+                {isApproved ? '✅' : '❌'}
               </motion.div>
               <div>
                 <p className="text-white font-black text-sm">
-                  {stamp?.type === 'approved' || decision === 'approved' ? 'Bid Approved' : 'Bid Rejected'}
+                  {isApproved ? 'Bid Approved' : 'Bid Rejected'}
                 </p>
                 <p className="text-xs font-mono mt-0.5" style={{ color: C.inkLight }}>
                   Zero-trust audit stamp generated
@@ -748,8 +770,8 @@ function VendorDetail({ vendor, onBack, onDecision, decision }) {
             <div className="grid grid-cols-3 gap-3">
               {[
                 { label: 'Officer',    value: 'Sr. PO R. Sharma · PO-CPCL-2026-047' },
-                { label: 'Timestamp', value: stamp?.ts || new Date().toLocaleString('en-IN') },
-                { label: 'Audit Hash', value: `#${stamp?.hash || 'A8F3B2C1'}` },
+                { label: 'Timestamp', value: stamp?.ts || vendor.decidedAt || new Date().toLocaleString('en-IN') },
+                { label: 'Audit Hash', value: `#${stamp?.hash || vendor.auditHash || 'A8F3B2C1'}` },
               ].map(({ label, value }) => (
                 <div key={label} className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.borderLight}` }}>
                   <p className="text-[10px] font-mono uppercase tracking-wider mb-1" style={{ color: C.inkLight }}>{label}</p>
@@ -757,8 +779,14 @@ function VendorDetail({ vendor, onBack, onDecision, decision }) {
                 </div>
               ))}
             </div>
+            {vendor.live && vendor.remarks && (
+              <p className="text-xs font-mono mt-3" style={{ color: C.inkMid }}>
+                Remarks: {vendor.remarks}
+              </p>
+            )}
             <p className="text-[10px] font-mono mt-3 pt-3" style={{ color: C.inkLight, borderTop: `1px solid ${C.borderLight}` }}>
               🛡️ Tamper-proof · DPDPA Compliant · Immutable audit record
+              {vendor.live && ' · Log in as Vendor to see the bid status'}
             </p>
           </motion.div>
         )}
@@ -769,17 +797,59 @@ function VendorDetail({ vendor, onBack, onDecision, decision }) {
 
 // ── MAIN DASHBOARD ────────────────────────────────────────────
 export default function OfficerDashboard() {
-  const navigate                      = useNavigate();
-  const [selectedVendor, setSelected] = useState(null);
-  const [decisions, setDecisions]     = useState({});
-  const [filter, setFilter]           = useState('all');
+  const navigate                    = useNavigate();
+  const [record, setRecord]         = useState(() => getRecord());   // the vendor's saved submission (localStorage)
+  const [selectedId, setSelectedId] = useState(null);
+  const [seedDecisions, setSeed]    = useState({});                  // decisions on the 3 built-in sample vendors
+  const [filter, setFilter]         = useState('all');
 
-  const handleDecision = (id, type) => setDecisions((d) => ({ ...d, [id]: type }));
+  // Re-read the saved record when the tab regains focus or another tab changes it
+  useEffect(() => {
+    const refresh = () => setRecord(getRecord());
+    window.addEventListener('storage', refresh);
+    window.addEventListener('focus', refresh);
+    return () => {
+      window.removeEventListener('storage', refresh);
+      window.removeEventListener('focus', refresh);
+    };
+  }, []);
 
-  const approved = Object.values(decisions).filter(d => d === 'approved').length;
-  const rejected = Object.values(decisions).filter(d => d === 'rejected').length;
-  const pending  = VENDORS.length - approved - rejected;
-  const stats    = { total: VENDORS.length, approved, rejected, pending };
+  // Live submission (null until the vendor has submitted) goes on top of the built-in vendors
+  const base = toOfficerVendor(record);
+  const liveVendor = base
+    ? { ...base, decidedAt: record.decidedAt, auditHash: record.hash, remarks: record.remarks }
+    : null;
+  const vendors = liveVendor ? [liveVendor, ...VENDORS] : VENDORS;
+
+  // One decisions map for the list, the filters and the stats
+  const decisions = { ...seedDecisions };
+  if (liveVendor && record.decision) decisions[liveVendor.id] = record.decision;
+
+  const selectedVendor = selectedId ? vendors.find((v) => v.id === selectedId) || null : null;
+
+  const handleDecision = (id, type, remarks) => {
+    if (liveVendor && id === liveVendor.id) {
+      const rec = decide(type, remarks);   // writes status + remarks into the shared record
+      setRecord(rec);
+      return { ts: rec.decidedAt, hash: rec.hash };
+    }
+    setSeed((d) => ({ ...d, [id]: type }));
+    return null;
+  };
+
+  // Clear the saved demo data (same as the button on the vendor page)
+  const handleStartFresh = () => {
+    clearRecord();
+    setRecord(getRecord());
+    setSeed({});
+    setSelectedId(null);
+    setFilter('all');
+  };
+
+  const approved = vendors.filter((v) => decisions[v.id] === 'approved').length;
+  const rejected = vendors.filter((v) => decisions[v.id] === 'rejected').length;
+  const pending  = vendors.length - approved - rejected;
+  const stats    = { total: vendors.length, approved, rejected, pending };
 
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col" style={{ background: C.bg }}>
@@ -803,7 +873,7 @@ export default function OfficerDashboard() {
           boxShadow: '0 1px 40px rgba(168,85,247,0.08)',
         }}
       >
-        <div style={{ width: '200px', flexShrink: 0 }}>
+        <div style={{ width: '340px', flexShrink: 0 }}>
           <img
             src="/assets/gem-logo.png"
             alt="GeM"
@@ -820,8 +890,20 @@ export default function OfficerDashboard() {
           />
           <span className="text-white font-black text-lg tracking-wide">Officer Portal</span>
         </div>
-        <div style={{ width: '200px', flexShrink: 0 }} className="flex items-center justify-end gap-4">
+        <div style={{ width: '340px', flexShrink: 0 }} className="flex items-center justify-end gap-3">
           <span className="text-sm font-mono" style={{ color: C.inkMid }}>officer@cpcl.gov.in</span>
+          <button
+            onClick={handleStartFresh}
+            title="Clear the saved demo data and start over"
+            className="px-3 py-1.5 rounded-lg text-xs font-bold font-mono cursor-pointer transition-all hover:brightness-125"
+            style={{
+              background: 'rgba(251,191,36,0.1)',
+              border: '1px solid rgba(251,191,36,0.3)',
+              color: C.amber,
+            }}
+          >
+            ↺ Start fresh
+          </button>
           <button
             onClick={() => navigate('/login')}
             className="px-4 py-1.5 rounded-lg text-sm font-bold font-mono cursor-pointer transition-all hover:brightness-125"
@@ -843,7 +925,7 @@ export default function OfficerDashboard() {
           setFilter={setFilter}
           stats={stats}
           showBack={!!selectedVendor}
-          onBack={() => setSelected(null)}
+          onBack={() => setSelectedId(null)}
         />
 
         <main className="flex-1 overflow-y-auto min-h-0 no-scrollbar">
@@ -857,10 +939,11 @@ export default function OfficerDashboard() {
                 className="h-full"
               >
                 <VendorList
-                  vendors={VENDORS}
+                  vendors={vendors}
                   decisions={decisions}
-                  onView={setSelected}
+                  onView={(v) => setSelectedId(v.id)}
                   filter={filter}
+                  hasLive={!!liveVendor}
                 />
               </motion.div>
             ) : (
@@ -873,7 +956,7 @@ export default function OfficerDashboard() {
                 <VendorDetail
                   vendor={selectedVendor}
                   decision={decisions[selectedVendor.id]}
-                  onBack={() => setSelected(null)}
+                  onBack={() => setSelectedId(null)}
                   onDecision={handleDecision}
                 />
               </motion.div>

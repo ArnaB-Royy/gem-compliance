@@ -8,6 +8,9 @@ import OfficerDashboard from './pages/officer/OfficerDashboard';
 import AppleSideNav from './components/AppleSideNav';
 import GemLogo from './components/GemLogo';
 
+// Backend URL (set VITE_API_URL in Vercel to your Render URL)
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 function AppContent() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -15,6 +18,11 @@ function AppContent() {
 
   const [activeIndex, setActiveIndex] = useState(0);
   const homeContainerRef = useRef(null);
+
+  // Wake the Render backend as soon as the site opens (fire and forget)
+  useEffect(() => {
+    fetch(`${API_URL}/`).catch(() => {});
+  }, []);
 
   const handleSlideInView = useCallback((index) => {
     setActiveIndex(index);
