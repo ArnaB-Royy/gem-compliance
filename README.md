@@ -1,160 +1,86 @@
 <div align="center">
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=0:050A18,50:2D6BE4,100:00E5FF&height=200&section=header&text=GeM%20Compliance&fontSize=60&fontColor=ffffff&fontAlignY=38&desc=AI-Powered%20Bid%20Verification%20Platform&descAlignY=58&descSize=20&animation=fadeIn" width="100%"/>
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:050A18,40:0A1628,70:1a2d5a,100:2D6BE4&height=180&section=header&text=GeM+Compliance&fontSize=56&fontColor=ffffff&fontAlignY=40&desc=AI-Powered+Bid+Verification+Platform+%7C+SIH+2026&descAlignY=62&descSize=16&animation=fadeIn" width="100%"/>
 
 <br/>
 
-[![Typing SVG](https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=600&size=22&pause=1000&color=00E5FF&center=true&vCenter=true&width=700&lines=SIH+2026+%7C+Problem+Statement+26100;Ministry+of+Petroleum+%26+Natural+Gas;AI+that+verifies+government+bids+instantly;Zero+manual+errors.+Zero+delays.+Zero+fraud.)](https://git.io/typing-svg)
+[![Typing SVG](https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=20&pause=1200&color=00E5FF&center=true&vCenter=true&width=750&lines=SIH+2026+%7C+Problem+Statement+26100;Ministry+of+Petroleum+%26+Natural+Gas+%7C+CPCL;Automated+bid+verification+in+seconds%2C+not+weeks;Zero+manual+errors.+Zero+delays.+Zero+fraud.;Team+MindForge+%F0%9F%9A%80)](https://git.io/typing-svg)
 
 <br/>
 
-![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=00E5FF)
-![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
-![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=node.js&logoColor=white)
-![TailwindCSS](https://img.shields.io/badge/Tailwind-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
-![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white)
-![Google Gemini](https://img.shields.io/badge/Gemini_AI-4285F4?style=for-the-badge&logo=google&logoColor=white)
+<a href="https://gem-compliance-mindforge.vercel.app/" target="_blank">
+  <img src="https://img.shields.io/badge/🌐_Frontend-gem--compliance--mindforge.vercel.app-2D6BE4?style=for-the-badge&labelColor=050A18"/>
+</a>
+&nbsp;
+<a href="https://gem-compliance-coyt.onrender.com/" target="_blank">
+  <img src="https://img.shields.io/badge/⚙️_Backend-gem--compliance--coyt.onrender.com-A855F7?style=for-the-badge&labelColor=050A18"/>
+</a>
 
-<br/>
+<br/><br/>
 
-> **Government procurement officers spend weeks manually verifying vendor documents across 10+ portals.**
-> **GeM Compliance does it in seconds — with AI, zero errors, and a tamper-proof audit trail.**
+![React](https://img.shields.io/badge/React-050A18?style=for-the-badge&logo=react&logoColor=00E5FF)
+![Vite](https://img.shields.io/badge/Vite-050A18?style=for-the-badge&logo=vite&logoColor=A78BFA)
+![Node.js](https://img.shields.io/badge/Node.js-050A18?style=for-the-badge&logo=node.js&logoColor=34D399)
+![TailwindCSS](https://img.shields.io/badge/Tailwind-050A18?style=for-the-badge&logo=tailwindcss&logoColor=00E5FF)
+![Framer Motion](https://img.shields.io/badge/Framer_Motion-050A18?style=for-the-badge&logo=framer&logoColor=A855F7)
+![Express](https://img.shields.io/badge/Express-050A18?style=for-the-badge&logo=express&logoColor=white)
 
 </div>
 
 ---
 
-## 🎯 The Problem
+## 🔍 Problem Statement
+
+**PS ID: 26100 · Ministry of Petroleum & Natural Gas · CPCL**
+
+> Government officers spend **weeks** manually verifying vendor documents across 10+ portals — GST, PAN, EPFO, MSME, ITR, OEM. Errors happen. Fraud slips through. No audit trail exists.
 
 ```
-Vendor submits bid on GeM portal
-         ↓
-Officer manually checks GST portal → EPFO portal → PAN database
-→ MSME registry → ITR records → OEM certificates
-         ↓
-Takes 2–4 weeks. Errors happen. Fraud slips through.
-```
-
-**GeM Compliance replaces this entire chain with one AI-powered platform.**
-
----
-
-## ✨ How It Works
-
-```
- VENDOR                    PLATFORM                   OFFICER
-   │                           │                          │
-   │── Upload 6 documents ────►│                          │
-   │                           │── Gemini Vision OCR      │
-   │                           │── Fuzzy Name Match       │
-   │                           │── Blacklist Check        │
-   │                           │── Compliance Score       │
-   │                           │                          │
-   │◄── Live audit trail ──────│                          │
-   │                           │──── Review Queue ───────►│
-   │                           │                          │── Approve/Reject
-   │◄── Final result ──────────│◄─── Zero-trust stamp ───│
+❌ BEFORE                              ✅ AFTER
+──────────────────────────────         ──────────────────────────────
+Vendor submits bid on GeM              Vendor submits bid on GeM
+          ↓                                        ↓
+Officer checks GST portal              AI reads all 6 documents
+          ↓                                        ↓
+Officer checks EPFO portal             Cross-verifies names, IDs, dates
+          ↓                                        ↓
+Officer checks PAN database            Generates compliance score 0–100
+          ↓                                        ↓
+Officer checks MSME registry           Officer reviews → approves
+          ↓                                        ↓
+2–4 weeks. Errors. No trail.           Minutes. Accurate. Tamper-proof.
 ```
 
 ---
 
-## 🚀 Key Innovations
+## ✨ Innovations
 
-| # | Innovation | What It Does |
-|---|-----------|-------------|
-| 🔍 | **Live OCR Preview** | Gemini Vision reads documents in real time — watch AI extract data as you upload |
-| 🧠 | **Explainable AI (XAI)** | Every decision explained in plain English, not just a score |
-| 🔤 | **Fuzzy Name Matching** | Cross-document name verification with % similarity — catches typos and mismatches |
-| 🔒 | **Zero Trust Hashing** | Every decision gets a tamper-proof audit hash — immutable, DPDPA compliant |
-| 📴 | **Offline First** | AI processing runs locally — no internet dependency during verification |
-| 🛡️ | **Cross-Ministry Blacklist** | Checks against all ministry databases, not just CPCL |
+| | Feature | Description |
+|---|---|---|
+| 🧠 | **Explainable AI (XAI)** | Every decision explained in plain English — not just a score |
+| 🔤 | **Fuzzy Name Matching** | Cross-document name similarity check with % score — catches typos & mismatches |
+| 🔒 | **Zero Trust Hashing** | Every approval gets a tamper-proof SHA audit hash — immutable record |
+| 📴 | **Offline First** | AI processing runs locally — no internet dependency |
+| 🛡️ | **Cross-Ministry Blacklist** | Checks across all ministry databases, not just CPCL |
 | 📊 | **AI Confidence Calibration** | Uncertain fields auto-flagged for human review |
-| 🗃️ | **DPDPA Compliant** | Documents processed locally and auto-deleted after verification |
+| 🗃️ | **DPDPA Compliant** | Documents processed locally and auto-deleted post-verification |
+| 👁️ | **Live OCR Preview** | Watch AI extract document data in real time with confidence bars |
 
 ---
 
-## 🖥️ Platform Preview
-
-<div align="center">
-
-| Vendor Portal | Officer Portal |
-|:---:|:---:|
-| 🔵 Cyan Theme | 🟣 Purple Theme |
-| Upload → OCR → Submit | Review Queue → Approve/Reject |
-| Live audit trail | Zero-trust stamp |
-
-</div>
-
----
-
-## 🗂️ Project Structure
+## 🖥️ Platform
 
 ```
-gem-compliance/
-├── src/
-│   ├── components/
-│   │   ├── AppleSideNav.jsx     # Dot navigation
-│   │   └── GemLogo.jsx          # Logo component
-│   ├── pages/
-│   │   ├── HomePage.jsx         # 6-section landing page
-│   │   ├── LoginPage.jsx        # Vendor + Officer login
-│   │   ├── vendor/
-│   │   │   └── VendorDashboard.jsx   # Upload, OCR, audit trail
-│   │   └── officer/
-│   │       └── OfficerDashboard.jsx  # Review queue, decisions
-│   └── App.jsx
-├── backend/
-│   ├── server.js                # Express server
-│   ├── routes/
-│   │   └── ocr.js               # Gemini Vision OCR route
-│   └── .env.example
-└── public/
-    └── assets/
+┌─────────────────────────────────────────────────────────────┐
+│                     VENDOR PORTAL  🔵                        │
+│  Upload 6 Docs → Live OCR → Fuzzy Match → Submit → Result   │
+├─────────────────────────────────────────────────────────────┤
+│                    OFFICER PORTAL  🟣                         │
+│  Review Queue → Document Detail → AI Rec → Approve/Reject   │
+└─────────────────────────────────────────────────────────────┘
 ```
 
----
-
-## ⚙️ Tech Stack
-
-```
-Frontend          Backend           AI / APIs
-─────────         ─────────         ─────────────
-React + Vite      Node.js           Google Gemini Vision
-Tailwind CSS      Express           OCR + Extraction
-Framer Motion     MongoDB
-React Router      Multer
-```
-
----
-
-## 🏃 Run Locally
-
-```bash
-# Clone the repo
-git clone https://github.com/ArnaB-Royy/gem-compliance.git
-cd gem-compliance
-
-# Install frontend dependencies
-npm install
-npm run dev
-
-# In a new terminal — setup backend
-cd backend
-npm install
-
-# Add your Gemini API key
-cp .env.example .env
-# Edit .env and add: GEMINI_API_KEY=your_key_here
-
-node server.js
-```
-
-Frontend runs on `http://localhost:5173`
-Backend runs on `http://localhost:3000`
-
----
-
-## 🎬 Demo Credentials
+### Demo Credentials
 
 | Portal | Email | Password |
 |--------|-------|----------|
@@ -163,45 +89,145 @@ Backend runs on `http://localhost:3000`
 
 ---
 
-## 👨‍💻 Team MindForge
+## 🗂️ Project Structure
+
+```
+gem-compliance/
+├── README.md
+│
+├── Backend/
+│   ├── server.js                   # Express server entry point
+│   ├── listModels.js               # AI model listing utility
+│   ├── package.json
+│   └── routes/
+│       └── ocr.js                  # Document OCR route
+│
+└── Frontend/
+    ├── index.html
+    ├── vite.config.js
+    ├── tailwind.config.js
+    ├── postcss.config.js
+    ├── vercel.json
+    ├── public/
+    │   ├── favicon.svg
+    │   ├── icons.svg
+    │   └── assets/
+    │       ├── gem-logo.png
+    │       └── slide1–6.jpg        # Hero section images
+    └── src/
+        ├── App.jsx                 # Router setup
+        ├── main.jsx
+        ├── components/
+        │   ├── AppleSideNav.jsx    # Dot scroll navigation
+        │   ├── DotNav.jsx
+        │   ├── GemLogo.jsx         # GeM logo component
+        │   └── SideNav.jsx
+        ├── pages/
+        │   ├── HomePage.jsx        # 6-section scroll landing page
+        │   ├── LoginPage.jsx       # Vendor + Officer login
+        │   ├── vendor/
+        │   │   └── VendorDashboard.jsx   # Upload, OCR, audit trail
+        │   └── officer/
+        │       └── OfficerDashboard.jsx  # Review queue, decisions
+        └── utils/
+            └── storage.js
+```
+
+---
+
+## ⚙️ Tech Stack
+
+```
+Frontend                    Backend
+────────────────────        ──────────────────
+React 18 + Vite             Node.js
+Tailwind CSS                Express
+Framer Motion               Multer
+React Router DOM            dotenv + cors
+```
+
+---
+
+## 🏃 Run Locally
+
+```bash
+# Clone
+git clone https://github.com/ArnaB-Royy/gem-compliance.git
+cd gem-compliance
+
+# Frontend
+cd Frontend
+npm install
+npm run dev
+# → http://localhost:5173
+
+# Backend (new terminal)
+cd Backend
+npm install
+cp .env.example .env
+# Add your API key inside .env
+node server.js
+# → http://localhost:3000
+```
+
+---
+
+## 🚀 Deployment
+
+| Layer | Platform | URL |
+|-------|----------|-----|
+| Frontend | Vercel | https://gem-compliance-mindforge.vercel.app/ |
+| Backend | Render | https://gem-compliance-coyt.onrender.com/ |
+
+> ⚠️ API keys are stored as environment variables on the hosting platform — never in code or GitHub.
+
+---
+
+## 👥 Team MindForge
 
 <div align="center">
 
 <table>
   <tr>
-    <td align="center">
+    <td align="center" width="150">
+      <br/>
+      <b>Souhardya Sarkar</b><br/>
+      <sub>Team Leader</sub><br/><br/>
+      <img src="https://img.shields.io/badge/Leader-A855F7?style=flat-square"/>
+    </td>
+    <td align="center" width="150">
+      <br/>
       <b>Arnab Roy</b><br/>
-      <sub>Full Stack + AI Integration</sub><br/>
+      <sub>Full Stack + AI</sub><br/><br/>
       <a href="https://github.com/ArnaB-Royy">
-        <img src="https://img.shields.io/badge/GitHub-ArnaB--Royy-2D6BE4?style=flat&logo=github"/>
+        <img src="https://img.shields.io/badge/GitHub-2D6BE4?style=flat-square&logo=github&logoColor=white"/>
       </a>
     </td>
-    <td align="center">
+    <td align="center" width="150">
+      <br/>
       <b>Juhi Thakur</b><br/>
-      <sub>UI Design + Assets</sub><br/>
-      <img src="https://img.shields.io/badge/Role-Designer-00E5FF?style=flat"/>
-    </td>
-    <td align="center">
-      <b>Soumi Nandi</b><br/>
-      <sub>Research + Documentation</sub><br/>
-      <img src="https://img.shields.io/badge/Role-Research-A855F7?style=flat"/>
+      <sub>UI Design + Assets</sub><br/><br/>
+      <img src="https://img.shields.io/badge/Design-00E5FF?style=flat-square"/>
     </td>
   </tr>
   <tr>
-    <td align="center">
+    <td align="center" width="150">
+      <br/>
+      <b>Soumi Nandi</b><br/>
+      <sub>Research + Docs</sub><br/><br/>
+      <img src="https://img.shields.io/badge/Research-34D399?style=flat-square"/>
+    </td>
+    <td align="center" width="150">
+      <br/>
       <b>Neha Dey</b><br/>
-      <sub>Backend + Testing</sub><br/>
-      <img src="https://img.shields.io/badge/Role-Backend-34D399?style=flat"/>
+      <sub>Backend + Testing</sub><br/><br/>
+      <img src="https://img.shields.io/badge/Backend-FB7185?style=flat-square"/>
     </td>
-    <td align="center">
+    <td align="center" width="150">
+      <br/>
       <b>Aitijhya Jana</b><br/>
-      <sub>Presentation + PPT</sub><br/>
-      <img src="https://img.shields.io/badge/Role-Presentation-FBBF24?style=flat"/>
-    </td>
-    <td align="center">
-      <b>MindForge</b><br/>
-      <sub>SIH 2026</sub><br/>
-      <img src="https://img.shields.io/badge/Team-MindForge-FB7185?style=flat"/>
+      <sub>Presentation + PPT</sub><br/><br/>
+      <img src="https://img.shields.io/badge/Presentation-FBBF24?style=flat-square"/>
     </td>
   </tr>
 </table>
@@ -210,15 +236,13 @@ Backend runs on `http://localhost:3000`
 
 ---
 
-## 🏆 Built For
-
 <div align="center">
 
-**Smart India Hackathon 2026**
-**PS ID: 26100**
-**Ministry of Petroleum & Natural Gas**
-**Chennai Petroleum Corporation Limited (CPCL)**
+**Smart India Hackathon 2026 · PS ID: 26100**<br/>
+**Ministry of Petroleum & Natural Gas · CPCL**
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=0:00E5FF,50:2D6BE4,100:050A18&height=120&section=footer" width="100%"/>
+<br/>
+
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:2D6BE4,50:0A1628,100:050A18&height=100&section=footer" width="100%"/>
 
 </div>
